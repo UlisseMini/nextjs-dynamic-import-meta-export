@@ -1,7 +1,7 @@
 import { genGetStaticProps } from "../lib/genGetStaticProps";
 import Link from "next/link";
 
-const meta = {
+export const meta = {
   title: "Foo",
 };
 
