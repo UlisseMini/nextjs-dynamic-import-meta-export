@@ -27,6 +27,19 @@ You would find that `someExport` is undefined. **dynamic imports don't work on t
 
 I think nextjs is being overly aggressive in dead code elimination, leading it to trim `someExport` because it thinks it only gets used on the server inside `getStaticProps`.
 
+### A Stupid Workaround
+
+If you use `meta` somewhere in your client code nextjs won't preform the optimization of removing it. So something dumb like
+
+```js
+export default function FooPage(props) {
+  const _ = meta;
+  return (/* stuff */)
+}
+```
+
+Fixes it
+
 ### When is this useful
 
 Say you're using [mdx](https://mdxjs.com/) and you have a bunch of content in `pages/lesson/filename.mdx` that looks something like this:
@@ -157,3 +170,31 @@ The problem is `content: imports.default` (which is the JSX element `MDXContent`
 I could use [next-mdx-remote](https://github.com/hashicorp/next-mdx-remote) to fix this but then I'd have duplicated content from the hydration problem.
 
 That being said it might be possible to supress hydration somehow and only emit the static html. A test for this would be implementing a `StaticHTML({html})` component. If I can do that I can do it with mdx.
+
+### next-mdx-remote
+
+If it's good enough for hashicorp it's probably good enough for me...
+
+**Imports and exports don't work** since the mdx files can be loaded from anywhere and imports are relative.
+You must pass components you want to use as props, this isn't an issue though because you can use dynamic to lazy load them.
+You could also write code that checks for each component in `getStaticProps`, you have the power.
+
+To make the dev server work I'd need [next-remote-watch](https://github.com/hashicorp/next-remote-watch), actually I should already be using this to reload `index.tsx` when `pages/lesson/*.mdx` files change.
+
+Wow I just read the code for next-mdx-remote and it's super short and simple! I'm no longer so afraid of adding more complexity.
+
+You can pass stuff to mdx using `<MDXContent scope={scope} />` meaning I can provide default imports and namespaces! This is just what I wanted! (scope is client side, though components do statically render)
+
+Lesson: I should have researched next-mdx-remote more before making my decision, also I should have read the code as part of my research.
+
+I had trouble setting up math, [apparently](https://github.com/hashicorp/next-mdx-remote/issues/221#issuecomment-1018929713) I need to install `next-mdx-remote@next` to make `next-mdx-remote` use the latest version of `mdx` thus making it comptatible.
+
+Lesson: when you think something is a version issue [check npm](https://www.npmjs.com/package/next-mdx-remote?activeTab=versions)
+
+### Don't use mdx
+
+Is this all too much of a hassle? The people using my site don't care about how nice my markdown is, I could just write everything in tsx.
+
+I'd have to write `<Katex>Math</Katex>` and stuff but that isn't so bad, and I should be able to convert tsx -> markdown if I ever want to.
+
+If I did this I would not need `getStaticProps` or dynamic imports as I could just import deps without fear of explosion as I'd be using them explicitly.
